@@ -1,4 +1,4 @@
-package com.redcamel.routes;
+package com.redcamel.rotas;
 
 import java.util.Iterator;
 
@@ -32,6 +32,9 @@ public class RedCamelRouter extends RouteBuilder {
 	public void configure() throws Exception {
 		camel.addComponent("activemq", ActiveMQComponent.activeMQComponent(brokerUrl));
 		
+		from("direct:ping")
+		   .log("Corpo da mensagem: ${body}");
+		
 		from(ftpUrl)
 	  	  .routeId("sftp-transacoes-bancarias")
 	  	    .filter()
@@ -45,12 +48,16 @@ public class RedCamelRouter extends RouteBuilder {
 	      	                .log("Arquivo ${file:name} entregue.");
 		
 		from("seda:processa-arquivos")
-	  	  .routeId("activemq-transacoes-bancarias")
+	  	  .routeId("activemq-sftp-transacoes-bancarias")
 	  	    .process(new ProcessaArquivoDebitoAutomatico())
 	  	      .log("Arquivo XML: ${body}")
 	  	        .to("activemq:queue:DebitoAutomaticoQueue");
 		
 		
+		from("direct:rest-transacoes-bancarias")
+		   .log("nova transacao bancaria: ${body}")
+		   	.routeId("activemq-rest-transacoes-bancarias")
+		   	  .to("activemq:queue:PagamentoQueue");
 	}
 
 	private DataFormatDefinition zipDataFormat() {
